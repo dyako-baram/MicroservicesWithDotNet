@@ -10,6 +10,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.OpenApi.Models;
+using Polly;
 
 namespace HelloDotnet5
 {
@@ -31,7 +32,12 @@ namespace HelloDotnet5
             {
                 c.SwaggerDoc("v1", new OpenApiInfo { Title = "HelloDotnet5", Version = "v1" });
             });
-            services.AddHttpClient<WeatherClient>();
+            services.AddHttpClient<WeatherClient>()
+                .AddTransientHttpErrorPolicy(builder=>builder.WaitAndRetryAsync(10,retryCount=>TimeSpan.FromSeconds(Math.Pow(2,retryCount))))
+                .AddTransientHttpErrorPolicy(builder=>builder.CircuitBreakerAsync(3,TimeSpan.FromSeconds(10)));
+
+            services.AddHealthChecks()
+                    .AddCheck<ExternalEndpoinHealthCheck>("OpenWeather");
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -51,6 +57,7 @@ namespace HelloDotnet5
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapControllers();
+                endpoints.MapHealthChecks("/health");
             });
         }
     }
