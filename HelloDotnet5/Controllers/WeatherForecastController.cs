@@ -11,29 +11,26 @@ namespace HelloDotnet5.Controllers
     [Route("[controller]")]
     public class WeatherForecastController : ControllerBase
     {
-        private static readonly string[] Summaries = new[]
-        {
-            "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-        };
-
         private readonly ILogger<WeatherForecastController> _logger;
+        private readonly WeatherClient _cleint;
 
-        public WeatherForecastController(ILogger<WeatherForecastController> logger)
+        public WeatherForecastController(ILogger<WeatherForecastController> logger,WeatherClient cleint)
         {
             _logger = logger;
+            _cleint = cleint;
         }
 
         [HttpGet]
-        public IEnumerable<WeatherForecast> Get()
+        [Route("{city}")]
+        public async Task<WeatherForecast> Get(string city)
         {
-            var rng = new Random();
-            return Enumerable.Range(1, 5).Select(index => new WeatherForecast
-            {
-                Date = DateTime.Now.AddDays(index),
-                TemperatureC = rng.Next(-20, 55),
-                Summary = Summaries[rng.Next(Summaries.Length)]
-            })
-            .ToArray();
+           var foreCast=await _cleint.GetCurrentWeatherAsync(city);
+            return new WeatherForecast{
+                Summary=foreCast.weather[0].description,
+                TemperatureC=(int)foreCast.main.temp,
+                Date=DateTimeOffset.FromUnixTimeSeconds(foreCast.dt).DateTime
+
+           };
         }
     }
 }
